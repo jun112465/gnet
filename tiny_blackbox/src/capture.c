@@ -167,17 +167,6 @@ int *record_end, uint8_t *display_frame, uint8_t *record_frame){
         }
         pthread_mutex_unlock(&display_mutex);
 
-        pthread_mutex_lock(&record_mutex);
-        if (record_queue && record_queue->size > MAX_QUEUE_SIZE)
-        {
-            pthread_mutex_unlock(&record_mutex);
-            usleep(10);
-            continue;
-        }
-        pthread_mutex_unlock(&record_mutex);
-
-
-
         // read frame
         if (fread(display_frame, 1, FRAME_SIZE, video_file) != FRAME_SIZE)
             break;
