@@ -62,6 +62,8 @@ void* capture_thread_func(void*)
         // open or reload video file
         init_video(&video_file);
 
+
+        // read_video(video_file, display_queue, record_queue, &record_end, display_frame, record_frame);
         // read video and add frame to queue
         if(read_video(video_file, display_queue, record_queue, &record_end, display_frame, record_frame)){
             // replay를 위한 설정값 설정.
@@ -152,19 +154,28 @@ int *record_end, uint8_t *display_frame, uint8_t *record_frame){
         // read input
         if (user_input == 'r')
             return 1;
-        
         if (user_input == 'q')
             return 0;
 
         // check size of display_queue
-        // pthread_mutex_lock(&display_mutex);
+        pthread_mutex_lock(&display_mutex);
         if (display_queue->size > MAX_QUEUE_SIZE)
         {
             pthread_mutex_unlock(&display_mutex);
             usleep(10);
             continue;
         }
-        // pthread_mutex_unlock(&display_mutex);
+        pthread_mutex_unlock(&display_mutex);
+
+        pthread_mutex_lock(&record_mutex);
+        if (record_queue && record_queue->size > MAX_QUEUE_SIZE)
+        {
+            pthread_mutex_unlock(&record_mutex);
+            usleep(10);
+            continue;
+        }
+        pthread_mutex_unlock(&record_mutex);
+
 
 
         // read frame
