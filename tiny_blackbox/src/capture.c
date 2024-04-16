@@ -22,10 +22,11 @@ void* capture_thread_func(void*)
     int record_end = 0;
     DISPLAY_ARG display_arg;
     RECORD_ARG record_arg;
-    FILE *video_file, *record_file;
     pthread_t display_thread, record_thread;
-    PQUEUE record_queue, display_queue;
-    uint8_t *display_frame, *record_frame;
+
+    FILE *video_file=NULL, *record_file=NULL;
+    PQUEUE record_queue=NULL, display_queue=NULL;
+    uint8_t *display_frame=NULL, *record_frame=NULL;
 
     // init mutex
     pthread_mutex_init(&display_mutex, NULL);
@@ -59,60 +60,14 @@ void* capture_thread_func(void*)
     while (1)
     {
         // open or reload video file
-        if(video_file == NULL){
-            video_file = fopen(VIDEO, "rb");
-            if(video_file == NULL) {
-                printf("cannot open file %s\n", VIDEO);
-                perror("capture.c fopen error");
-                exit(1);
-            }
+        init_video(&video_file);
+
+        // read video and add frame to queue
+        if(read_video(video_file, display_queue, record_queue, &record_end, display_frame, record_frame)){
+            // replay를 위한 설정값 설정.
+            init_for_replay(&record_end, record_file, record_queue, display_queue);
         }
-        else{
-            fclose(video_file);
-            video_file = NULL;
-            video_file = fopen(VIDEO, "rb");
-            if(video_file == NULL){
-                printf("cannot open file %s\n", VIDEO);
-                exit(1);
-            }
-        }
-
-        // play video
-        while (1)
-        {
-            // read input
-            if(user_input == 'r' || user_input=='q') break;
-
-            // check size of display_queue
-            pthread_mutex_lock(&display_mutex);
-            if(display_queue->size > MAX_QUEUE_SIZE) {
-                pthread_mutex_unlock(&display_mutex);
-                usleep(10);
-                continue;
-            }
-            pthread_mutex_unlock(&display_mutex);
-
-            // read frame
-            if (fread(display_frame, 1, FRAME_SIZE, video_file) != FRAME_SIZE) {
-                break;
-            }
-
-            // push frame on display_queue
-            pthread_mutex_lock(&display_mutex);
-            enqueue(display_queue, display_frame);
-            pthread_mutex_unlock(&display_mutex);
-
-            // push frame on record_queue
-            if(!record_end){
-                memcpy(record_frame, display_frame, FRAME_SIZE);
-                pthread_mutex_lock(&record_mutex);
-                enqueue(record_queue, record_frame);
-                pthread_mutex_unlock(&record_mutex);
-            }
-        }
-
-        if(user_input == 'q') break;
-        replay_init(&record_end, record_file, record_queue, display_queue);
+        else break;
     }
 
     // wait thread termination 
@@ -135,7 +90,32 @@ void* capture_thread_func(void*)
     pthread_exit(NULL);
 }
 
-void replay_init(int *record_end, FILE *record_file, PQUEUE record_queue, PQUEUE display_queue){
+void init_video(FILE **video_file){
+
+    if (*video_file == NULL)
+    {
+        *video_file = fopen(VIDEO, "rb");
+        if (*video_file == NULL)
+        {
+            printf("cannot open file %s\n", VIDEO);
+            perror("capture.c fopen error");
+            exit(1);
+        }
+    }
+    else
+    {
+        fclose(*video_file);
+        *video_file = NULL;
+        *video_file = fopen(VIDEO, "rb");
+        if (*video_file == NULL)
+        {
+            printf("cannot open file %s\n", VIDEO);
+            exit(1);
+        }
+    }
+}
+
+void init_for_replay(int *record_end, FILE *record_file, PQUEUE record_queue, PQUEUE display_queue){
     // pop frames of display queue
     pthread_mutex_lock(&display_mutex);
     if (display_queue->front != NULL)
@@ -157,4 +137,54 @@ void replay_init(int *record_end, FILE *record_file, PQUEUE record_queue, PQUEUE
     }
 
     user_input = 'p';
+}
+
+int read_video(FILE *video_file, PQUEUE display_queue, PQUEUE record_queue, 
+int *record_end, uint8_t *display_frame, uint8_t *record_frame){
+
+    if(video_file == NULL) {
+        printf("video file is NULL");
+        perror("capture.c read_video()");
+    }
+
+    while (1)
+    {
+        // read input
+        if (user_input == 'r')
+            return 1;
+        
+        if (user_input == 'q')
+            return 0;
+
+        // check size of display_queue
+        // pthread_mutex_lock(&display_mutex);
+        if (display_queue->size > MAX_QUEUE_SIZE)
+        {
+            pthread_mutex_unlock(&display_mutex);
+            usleep(10);
+            continue;
+        }
+        // pthread_mutex_unlock(&display_mutex);
+
+
+        // read frame
+        if (fread(display_frame, 1, FRAME_SIZE, video_file) != FRAME_SIZE)
+            break;
+
+        // push frame on display_queue
+        pthread_mutex_lock(&display_mutex);
+        enqueue(display_queue, display_frame);
+        pthread_mutex_unlock(&display_mutex);
+
+        // push frame on record_queue
+        if (!*record_end)
+        {
+            memcpy(record_frame, display_frame, FRAME_SIZE);
+            pthread_mutex_lock(&record_mutex);
+            enqueue(record_queue, record_frame);
+            pthread_mutex_unlock(&record_mutex);
+        }
+    }
+
+    return 1;
 }

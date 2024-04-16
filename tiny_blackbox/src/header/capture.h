@@ -21,4 +21,8 @@
 #define RECORD_FILE "record.raw"
 
 void* capture_thread_func(void*);
-void replay_init(int* record_end, FILE*, PQUEUE display_queue, PQUEUE record_queue);
+
+void init_video(FILE **video_file);
+void init_for_replay(int* record_end, FILE*, PQUEUE display_queue, PQUEUE record_queue);
+int read_video(FILE *video_file, PQUEUE display_queue, PQUEUE record_queue, 
+int *record_end, uint8_t *display_frame, uint8_t *record_frame);
