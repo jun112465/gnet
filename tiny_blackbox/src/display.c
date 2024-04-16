@@ -6,6 +6,10 @@ extern pthread_mutex_t display_mutex;
 extern pthread_mutex_t pause_mutex;
 
 void* display_thread_func(void *arg){
+    clock_t start, end;
+    double cpu_time_used;
+    FILE *time_file;
+
     DISPLAY_ARG *display_arg = (DISPLAY_ARG*)arg;
     PQUEUE queue = display_arg->queue;
 
@@ -17,8 +21,11 @@ void* display_thread_func(void *arg){
     fbfd = open(FRAMEBUFFER_DEVICE, O_RDWR);
     ioctl(fbfd, FBIOGET_VSCREENINFO, &vinfo);
     fb = (unsigned char *)mmap(0, vinfo.yres_virtual * vinfo.xres_virtual * vinfo.bits_per_pixel / 8, PROT_READ | PROT_WRITE, MAP_SHARED, fbfd, 0);
+    time_file = fopen("time", "w");
 
     while(1){
+        start = clock(); // 시작 시간 기록
+    
         if(!pp) pthread_mutex_lock(&pause_mutex);
         if(user_input == 'q') break;
 
@@ -46,7 +53,11 @@ void* display_thread_func(void *arg){
         dequeue(queue);
         pthread_mutex_unlock(&display_mutex);
 
-        usleep(30000);
+        usleep(15000);
+
+        end = clock(); // 종료 시간 기록
+        cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC; // 실행 시간 계산
+        fprintf(time_file, "%lf\n", cpu_time_used);
     }
 
     // free memory

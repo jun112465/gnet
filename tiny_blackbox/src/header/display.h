@@ -1,5 +1,7 @@
 #pragma once
 #include "capture.h"
+#include <time.h>
+
 
 #define FRAMEBUFFER_DEVICE "/dev/fb0"
 
