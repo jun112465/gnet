@@ -17,16 +17,16 @@ void* record_thread_func(void *arg){
     while(!(*end) || queue->front){
         if(user_input == 'q') break;
 
-        // pthread_mutex_lock(&record_mutex);
+        pthread_mutex_lock(&record_mutex);
         if(queue->front == NULL){
-            // pthread_mutex_unlock(&record_mutex);
-            usleep(10);
+            pthread_mutex_unlock(&record_mutex);
+            usleep(1);
             continue;
         }
         frame = queue->front->frame;
         fwrite(frame, FRAME_SIZE, 1, record_file);
         dequeue(queue);
-        // pthread_mutex_unlock(&record_mutex);
+        pthread_mutex_unlock(&record_mutex);
     }
 
     free(queue);

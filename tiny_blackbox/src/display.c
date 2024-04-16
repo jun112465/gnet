@@ -25,7 +25,7 @@ void* display_thread_func(void *arg){
         pthread_mutex_lock(&display_mutex);
         if(queue->front == NULL){
             pthread_mutex_unlock(&display_mutex);
-            usleep(10);
+            usleep(1);
             continue;
         } 
         frame = queue->front->frame;
@@ -46,7 +46,7 @@ void* display_thread_func(void *arg){
         dequeue(queue);
         pthread_mutex_unlock(&display_mutex);
 
-        // usleep(30000);
+        usleep(30000);
     }
 
     // free memory

@@ -162,7 +162,7 @@ int *record_end, uint8_t *display_frame, uint8_t *record_frame){
         if (display_queue->size > MAX_QUEUE_SIZE)
         {
             pthread_mutex_unlock(&display_mutex);
-            usleep(10);
+            usleep(1);
             continue;
         }
         pthread_mutex_unlock(&display_mutex);
