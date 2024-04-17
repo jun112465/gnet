@@ -16,6 +16,7 @@ pthread_mutex_t record_mutex;
 // for pause handling
 pthread_mutex_t pause_mutex;
 
+// 비디오 파일에서 프레임을 한장씩 읽어 출력과, 녹화를 위한 큐에 값을 넣는다. 
 void* capture_thread_func(void*)
 {
     // 변수 선언.
@@ -61,7 +62,6 @@ void* capture_thread_func(void*)
     {
         // open or reload video file
         init_video(&video_file);
-
 
         // read_video(video_file, display_queue, record_queue, &record_end, display_frame, record_frame);
         // read video and add frame to queue
@@ -180,9 +180,18 @@ int *record_end, uint8_t *display_frame, uint8_t *record_frame){
         if (!*record_end)
         {
             memcpy(record_frame, display_frame, FRAME_SIZE);
-            pthread_mutex_lock(&record_mutex);
-            enqueue(record_queue, record_frame);
-            pthread_mutex_unlock(&record_mutex);
+            while(1){
+                pthread_mutex_lock(&record_mutex);
+                if (record_queue->size > MAX_QUEUE_SIZE){
+                    // usleep(1);
+                    pthread_mutex_unlock(&record_mutex);
+                    continue;
+                }
+
+                enqueue(record_queue, record_frame);
+                pthread_mutex_unlock(&record_mutex);
+                break;
+            }
         }
     }
 

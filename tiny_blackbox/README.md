@@ -1,13 +1,17 @@
 # 설명
-RAW 동영상 파일을 읽어서 재생, 정지, 리플레이, 녹화 기능을 제공하는 간단한 동영상 플레이어.
+RAW 동영상 파일을 읽어서 재생, 정지, 리플레이, 녹화 기능을 제공하는 간단한 동영상 플레이어. 5개의 쓰레드로 작동한다. 
+- main thread
+- input thread : 사용자의 입력값을 받는 쓰레드.
+- capture thread : 출력과 녹화를 위한 값 선언 및 display thread, record thread를 실행시키는 역할. 비디오 파일의 frame 데이터를 읽고 출력을 위한 프레임 큐와 녹화를 위한 프레임 큐에 값을 넣는 역할.
+- display thread : display queue에서 프레임을 하나씩 꺼내서 frame buffer에 출력하는 역할. 
+- record thread : record_queue에서 프레임을 하나씩 꺼내서 새로운 record 파일에 데이터를 쓰는 역할. 
 
 # 구조
-- **main.c** 
+- main.c
     - 입력을 받기위한 쓰레드 (input.c), 동영상의 프레임을 저장하는 쓰레드(capture.c)를 각각 실행시키는 역할을 한다. 
-    - 주요 컴포넌트
-        - char user_input (전역변수) 
+
 - input.c
-    - q(quit), r(replay), p(pause & play) key를 눌렀을 때 user_input에 해당 값이 들어올 수 있도록 한다.
+    - q(quit), r(replay), p(pause OR play) key를 눌렀을 때 user_input에 해당 값이 들어올 수 있도록 한다.
 
 - capture.c
     - 비디오 파일을 열어서 buffer에 프레임을 하나씩 저장하는 역할을 한다. 또한, (q,r,p) key에 대한 처리도 해준다. 동영상의 프레임을 출력하는 display thread, 동영상을 새로 저장하는 record thread를 각각 실행시킨다. 
@@ -33,16 +37,3 @@ RAW 동영상 파일을 읽어서 재생, 정지, 리플레이, 녹화 기능을
     - record_thread에서 실행시킬 함수가 구현됐다. 
     - record_queue에서 프레임을 하나씩 꺼내서 새로운 동영상 파일에 저장한다. 
     - 처음 동영상을 다 읽으면 메모리를 해제하고 쓰레드가 종료된다. 
-
-
-# troubleshooting
-
-### 쓰레드 동기화 
-세마포어를 통해 임계영역에 대한 동기화를 하는 경우 항상 스레드가 실행되기전에 세마포어를 미리 초기화 해놓자. 세마포어를 초기화 하지 않은 상태에서 스레드가 실행되어 sem_wait()을 하게되면 무한 기다림에 빠질 수 있다. 
-또한, sem_wait()을 두번 연속 사용하여 교착상태에 빠진경우도 있다. sem_post()를 꼭 사용하자. 무한대기 상태에 빠진 경우 초기화가 잘됐는지, sem_post()로 작성해야할 코드를 sem_wait()으로 실수로 작성하진 않았는지 확인하자. 
-
-## munmap_chunck(): invalid pointer
-
-
-## double free or corruption (out)
-동적으로 할당된 메모리에 대해서 다시 해제하는 경우 발생하는 에러.
